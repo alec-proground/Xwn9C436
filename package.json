@@ -129,6 +129,6 @@
   },
   "dependencies": {
     "js-yaml": "^4.1.0",
-    "micromatch": "^4.0.5"
+    "micromatch": "^4.0.8"
   }
 }
