@@ -17,6 +17,7 @@ body:
       placeholder: "https://marketplace.visualstudio.com/items?itemName=[PUBLISHER].[EXTENSIONS_NAME]"
     validations:
       required: true
+  - type: input
     id: extension_name
     attributes:
       label: Extension Name
