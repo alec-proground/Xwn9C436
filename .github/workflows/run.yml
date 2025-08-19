@@ -2,7 +2,7 @@ name: Extract Extension Info
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited]
 
 jobs:
   extract:
@@ -109,12 +109,17 @@ jobs:
             core.info('✔️ Found exactly one extension.');
 
             const extension = extensions[0];
-            const expectedId = `${publisher}.${extensionName}`;
-            if (extension.extensionId.toLowerCase() !== expectedId.toLowerCase()) {
-              core.setFailed(`Error: Extension ID mismatch. Expected '${expectedId}' (case-insensitive), but found '${extension.extensionId}'.`);
+            if (extension.publisher.publisherName.toLowerCase() !== publisher.toLowerCase()) {
+              core.setFailed(`Error: Publisher name mismatch. Expected '${publisher}' (case-insensitive), but found '${extension.publisher.publisherName}'.`);
               return;
             }
-            core.info('✔️ Extension ID matches.');
+            core.info('✔️ Publisher name matches.');
+
+            if (extension.extensionName.toLowerCase() !== extensionName.toLowerCase()) {
+              core.setFailed(`Error: Extension name mismatch. Expected '${extensionName}' (case-insensitive), but found '${extension.extensionName}'.`);
+              return;
+            }
+            core.info('✔️ Extension name matches.');
 
             if (!extension.versions || extension.versions.length === 0) {
               core.setFailed('Error: No versions found for this extension.');
