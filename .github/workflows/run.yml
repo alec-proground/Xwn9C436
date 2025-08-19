@@ -1,0 +1,190 @@
+name: Extract Extension Info
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    outputs:
+      publisher: ${{ steps.parse.outputs.publisher }}
+      extension_name: ${{ steps.parse.outputs.extension_name }}
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - name: Parse Issue Body
+        id: parse
+        run: |
+          ISSUE_BODY="${{ github.event.issue.body }}"
+
+          get_form_value() {
+            local header="### $1"
+            echo "$ISSUE_BODY" | awk -v header="$header" '
+              $0 == header {
+                getline
+                while ($0 ~ /^\s*$/) { getline }
+                print $0
+                exit
+              }' | xargs
+          }
+
+          PUBLISHER=$(get_form_value "Publisher Name")
+          EXTENSION_NAME=$(get_form_value "Extension Name")
+          VERSION=$(get_form_value "version")
+
+          echo "Publisher: $PUBLISHER"
+          echo "Extension Name: $EXTENSION_NAME"
+          echo "Version: $VERSION"
+
+          echo "publisher=$PUBLISHER" >> $GITHUB_OUTPUT
+          echo "extension_name=$EXTENSION_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  search:
+    needs: extract
+    runs-on: ubuntu-latest
+    outputs:
+      vsix_url: ${{ steps.search-step.outputs.vsix_url }}
+      signature_url: ${{ steps.search-step.outputs.signature_url }}
+    steps:
+      - name: Search Marketplace
+        id: search-step
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const publisher = "${{ needs.extract.outputs.publisher }}";
+            const extensionName = "${{ needs.extract.outputs.extension_name }}";
+            const version = "${{ needs.extract.outputs.version }}";
+
+            if (!publisher || !extensionName) {
+              core.setFailed('Publisher or Extension Name is missing from the extract step.');
+              return;
+            }
+
+            core.info(`📡 Querying marketplace for ${publisher}.${extensionName}`);
+
+            const url = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
+            const body = {
+              filters: [{
+                criteria: [{
+                  filterType: 7,
+                  value: `${publisher}.${extensionName}`
+                }],
+                pageNumber: 1,
+                pageSize: 1,
+                sortBy: 0,
+                sortOrder: 0
+              }],
+              assetTypes: [],
+              flags: 914
+            };
+
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json;api-version=3.0-preview.1',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+              core.setFailed(`Failed to query marketplace: ${response.status} ${response.statusText}`);
+              return;
+            }
+
+            const data = await response.json();
+
+            // --- Validation Steps ---
+            core.info('🧐 Validating response...');
+            if (!data.results || !data.results[0] || !data.results[0].extensions) {
+              core.setFailed(`Error: Invalid response structure from marketplace.`);
+              return;
+            }
+            const extensions = data.results[0].extensions;
+            if (extensions.length !== 1) {
+              core.setFailed(`Error: Expected 1 extension in response, but found ${extensions.length}.`);
+              return;
+            }
+            core.info('✔️ Found exactly one extension.');
+
+            const extension = extensions[0];
+            const expectedId = `${publisher}.${extensionName}`;
+            if (extension.extensionId.toLowerCase() !== expectedId.toLowerCase()) {
+              core.setFailed(`Error: Extension ID mismatch. Expected '${expectedId}' (case-insensitive), but found '${extension.extensionId}'.`);
+              return;
+            }
+            core.info('✔️ Extension ID matches.');
+
+            if (!extension.versions || extension.versions.length === 0) {
+              core.setFailed('Error: No versions found for this extension.');
+              return;
+            }
+            core.info(`✔️ Found ${extension.versions.length} version(s).`);
+
+            if (version) {
+              core.info(`ℹ️ Specific version requested: ${version}`);
+              const versionExists = extension.versions.some(v => v.version === version);
+              if (!versionExists) {
+                core.setFailed(`Error: Specified version '${version}' not found in the marketplace.`);
+                return;
+              }
+              core.info(`✔️ Specified version '${version}' found.`);
+            } else {
+              core.info('ℹ️ No specific version requested, skipping version check.');
+            }
+
+            core.info('✅ Validation successful.');
+
+            // --- Extract Asset URLs ---
+            let targetVersionStr = version;
+            if (!targetVersionStr) {
+              targetVersionStr = extension.versions[0].version;
+              core.info(`ℹ️ No version specified. Using latest version for asset download: ${targetVersionStr}`);
+            } else {
+              core.info(`ℹ️ Using specified version for asset download: ${targetVersionStr}`);
+            }
+
+            const targetVersion = extension.versions.find(v => v.version === targetVersionStr);
+            if (!targetVersion) {
+                core.setFailed(`Could not find metadata for target version ${targetVersionStr}.`);
+                return;
+            }
+
+            const vsixFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VSIXPackage');
+            const signatureFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VsixSignature');
+
+            if (!vsixFile || !signatureFile) {
+                core.setFailed(`Could not find VSIX or Signature URL for version ${targetVersionStr}.`);
+                return;
+            }
+
+            const vsixUrl = vsixFile.source;
+            const signatureUrl = signatureFile.source;
+
+            core.info(`VSIX URL: ${vsixUrl}`);
+            core.info(`Signature URL: ${signatureUrl}`);
+
+            core.setOutput('vsix_url', vsixUrl);
+            core.setOutput('signature_url', signatureUrl);
+
+  add-comment:
+    needs: search
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add VSIX URL comment to issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const vsixUrl = "${{ needs.search.outputs.vsix_url }}";
+            const commentBody = `VSIX file found: ${vsixUrl}`;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+            console.log(`Commented on issue #${context.issue.number}`);
