@@ -1,0 +1,34 @@
+name: Issue
+description: Request ...
+title: "[TEST]: "
+labels: ["issue_test"]
+assignees:
+  - alec-proground
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Request Contents
+  - type: input
+    id: publisher
+    attributes:
+      label: Publisher Name
+      description: Required.
+      placeholder: "https://marketplace.visualstudio.com/items?itemName=[PUBLISHER].[EXTENSIONS_NAME]"
+    validations:
+      required: true
+    id: extension_name
+    attributes:
+      label: Extension Name
+      description: Required.
+      placeholder: "https://marketplace.visualstudio.com/items?itemName=[PUBLISHER].[EXTENSIONS_NAME]"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: version
+      description: If you want.
+      placeholder: 3.0.17
+    validations:
+      required: false
