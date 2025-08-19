@@ -179,6 +179,7 @@ jobs:
 
   add-comment:
     needs: search
+    if: success()
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -197,3 +198,43 @@ jobs:
               body: commentBody
             });
             console.log(`Commented on issue #${context.issue.number}`);
+
+  report-failure:
+    needs: search
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Report failure to issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commentBody = `❌ Failed to process the extension request. Please check the workflow run logs for details.`;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+
+  close-issue:
+    needs: [add-comment, report-failure]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Close issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed'
+            });
+            console.log(`Closed issue #${context.issue.number}`);
