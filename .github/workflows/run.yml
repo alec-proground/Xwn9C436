@@ -54,7 +54,11 @@ jobs:
           script: |
             const publisher = "${{ needs.extract.outputs.publisher }}";
             const extensionName = "${{ needs.extract.outputs.extension_name }}";
-            const version = "${{ needs.extract.outputs.version }}";
+            let version = "${{ needs.extract.outputs.version }}";
+
+            if (version === "_No response_") {
+              version = "";
+            }
 
             if (!publisher || !extensionName) {
               core.setFailed('Publisher or Extension Name is missing from the extract step.');
