@@ -27,7 +27,7 @@ jobs:
               }' | xargs
           }
 
-          EXTENSION_NAME=$(get_form_value "Extension Name")
+          EXTENSION_NAME=$(get_form_value "Publsher & Extension Name")
           VERSION=$(get_form_value "version")
 
           echo "Extension Name: $EXTENSION_NAME"
