@@ -41,14 +41,14 @@ jobs:
     needs: extract
     runs-on: ubuntu-latest
     outputs:
-      publisher: $({ steps.search-step.output.publisher })
-      title: $({ steps.search-step.output.title })
-      description: $({ steps.search-step.output.description })
-      extension_released: $({ steps.search-step.output.extension_released })
-      version: $({ steps.search-step.output.version })
-      version_updated: $({ steps.search-step.output.version_updated })
-      vsix_url: $({ steps.search-step.output.vsix_url })
-      signature_url: $({ steps.search-step.output.signature_url })
+      publisher: ${{ steps.search-step.output.publisher }}
+      title: ${{ steps.search-step.output.title }}
+      description: ${{ steps.search-step.output.description }}
+      extension_released: ${{ steps.search-step.output.extension_released }}
+      version: ${{ steps.search-step.output.version }}
+      version_updated: ${{ steps.search-step.output.version_updated }}
+      vsix_url: ${{ steps.search-step.output.vsix_url }}
+      signature_url: ${{ steps.search-step.output.signature_url }}
     steps:
       - name: Search Marketplace
         id: search-step
