@@ -60,19 +60,19 @@ jobs:
               version = "";
             }
 
-            if (!publisher || !extensionName) {
-              core.setFailed('Publisher or Extension Name is missing from the extract step.');
+            if (!publisher) {
+              core.setFailed('Extension Name is missing from the extract step.');
               return;
             }
 
-            core.info(`📡 Querying marketplace for ${publisher}.${extensionName}`);
+            core.info(`📡 Querying marketplace for ${publisher}`);
 
             const url = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
             const body = {
               filters: [{
                 criteria: [{
                   filterType: 7,
-                  value: `${publisher}.${extensionName}`
+                  value: `${publisher}`
                 }],
                 pageNumber: 1,
                 pageSize: 1,
@@ -146,26 +146,21 @@ jobs:
             core.info('✅ Validation successful.');
 
             // --- Extract Asset URLs ---
-            let targetVersionStr = version;
-            if (!targetVersionStr) {
-              targetVersionStr = extension.versions[0].version;
-              core.info(`ℹ️ No version specified. Using latest version for asset download: ${targetVersionStr}`);
-            } else {
-              core.info(`ℹ️ Using specified version for asset download: ${targetVersionStr}`);
-            }
+            let targetVersionStr = version || extension.versions[0].version;
+            core.info(`ℹ️ Using version for asset download: ${targetVersionStr}`);
 
             const targetVersion = extension.versions.find(v => v.version === targetVersionStr);
             if (!targetVersion) {
-                core.setFailed(`Could not find metadata for target version ${targetVersionStr}.`);
-                return;
+              core.setFailed(`Could not find metadata for target version ${targetVersionStr}.`);
+              return;
             }
 
             const vsixFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VSIXPackage');
             const signatureFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VsixSignature');
 
             if (!vsixFile || !signatureFile) {
-                core.setFailed(`Could not find VSIX or Signature URL for version ${targetVersionStr}.`);
-                return;
+              core.setFailed(`Could not find VSIX or Signature URL for version ${targetVersionStr}.`);
+              return;
             }
 
             const vsixUrl = vsixFile.source;
