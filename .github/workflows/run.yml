@@ -200,15 +200,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const vsixUrl = "${{ needs.search.outputs.vsix_url }}";
-            const commentBody = [
-              `publisher: ${ steps.search-step.output.publisher }`,
-              `title: ${ steps.search-step.output.title }`,
-              `description: ${ steps.search-step.output.description }`,
-              `extension_released: ${ steps.search-step.output.extension_released }`,
-              `version: ${ steps.search-step.output.version }`,
-              `version_updated: ${ steps.search-step.output.version_updated }`,
-              `vsix_url: ${ steps.search-step.output.vsix_url }`,
-              `signature_url: ${ steps.search-step.output.signature_url }`,
+            const commentBody = [              
+              `publisher: ${ needs.search.output.publisher }`,
+              `title: ${ needs.search.output.title }`,
+              `description: ${ needs.search.output.description }`,
+              `extension_released: ${ needs.search.output.extension_released }`,
+              `version: ${ needs.search.output.version }`,
+              `version_updated: ${ needs.search.output.version_updated }`,
+              `vsix_url: ${ needs.search.output.vsix_url }`,
+              `signature_url: ${ needs.search.output.signature_url }`,
             ];
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
