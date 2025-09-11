@@ -201,14 +201,14 @@ jobs:
           script: |
             const vsixUrl = "${{ needs.search.outputs.vsix_url }}";
             const commentBody = [              
-              `publisher: ${{ needs.search.output.publisher }}`,
-              `title: ${{ needs.search.output.title }}`,
-              `description: ${{ needs.search.output.description }}`,
-              `extension_released: ${{ needs.search.output.extension_released }}`,
-              `version: ${{ needs.search.output.version }}`,
-              `version_updated: ${{ needs.search.output.version_updated }}`,
-              `vsix_url: ${{ needs.search.output.vsix_url }}`,
-              `signature_url: ${{ needs.search.output.signature_url }}`,
+              `publisher: ${{ needs.search.outputs.publisher }}`,
+              `title: ${{ needs.search.outputs.title }}`,
+              `description: ${{ needs.search.outputs.description }}`,
+              `extension_released: ${{ needs.search.outputs.extension_released }}`,
+              `version: ${{ needs.search.outputs.version }}`,
+              `version_updated: ${{ needs.search.outputs.version_updated }}`,
+              `vsix_url: ${{ needs.search.outputs.vsix_url }}`,
+              `signature_url: ${{ needs.search.outputs.signature_url }}`,
             ];
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
