@@ -41,8 +41,14 @@ jobs:
     needs: extract
     runs-on: ubuntu-latest
     outputs:
-      vsix_url: ${{ steps.search-step.outputs.vsix_url }}
-      signature_url: ${{ steps.search-step.outputs.signature_url }}
+      publisher: $({ steps.search-step.output.publisher })
+      title: $({ steps.search-step.output.title })
+      description: $({ steps.search-step.output.description })
+      extension_released: $({ steps.search-step.output.extension_released })
+      version: $({ steps.search-step.output.version })
+      version_updated: $({ steps.search-step.output.version_updated })
+      vsix_url: $({ steps.search-step.output.vsix_url })
+      signature_url: $({ steps.search-step.output.signature_url })
     steps:
       - name: Search Marketplace
         id: search-step
@@ -163,6 +169,7 @@ jobs:
             const vsixUrl = vsixFile.source;
             const signatureUrl = signatureFile.source;
 
+            core.info(`Publisher: ${publisher}`);
             core.info(`Extension: ${extensionName}`);
             core.info(`VSIX URL: ${vsixUrl}`);
             core.info(`Signature URL: ${signatureUrl}`);
@@ -171,6 +178,12 @@ jobs:
             core.info(`Version: ${targetVersion.version}`);
             core.info(`LastUpdate: ${targetVersion.lastUpdated}`);
             
+            core.setOutput('publisher', publisher);
+            core.setOutput('title', extensionName);
+            core.setOutput('description', extension.shortDescription);
+            core.setOutput('extension_released', extension.releaseDate);
+            core.setOutput('version', targetVersion.version);
+            core.setOutput('version_updated', targetVersion.lastUpdated);
             core.setOutput('vsix_url', vsixUrl);
             core.setOutput('signature_url', signatureUrl);
 
@@ -187,12 +200,21 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const vsixUrl = "${{ needs.search.outputs.vsix_url }}";
-            const commentBody = `VSIX file found: ${vsixUrl}`;
+            const commentBody = [
+              `publisher: ${ steps.search-step.output.publisher }`,
+              `title: ${ steps.search-step.output.title }`,
+              `description: ${ steps.search-step.output.description }`,
+              `extension_released: ${ steps.search-step.output.extension_released }`,
+              `version: ${ steps.search-step.output.version }`,
+              `version_updated: ${ steps.search-step.output.version_updated }`,
+              `vsix_url: ${ steps.search-step.output.vsix_url }`,
+              `signature_url: ${ steps.search-step.output.signature_url }`,
+            ];
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: commentBody
+              body: commentBody.join('\n')
             });
             console.log(`Commented on issue #${context.issue.number}`);
 
@@ -218,7 +240,7 @@ jobs:
 
   close-issue:
     needs: [add-comment, report-failure]
-    if: always()
+    if: failure()
     runs-on: ubuntu-latest
     permissions:
       issues: write
