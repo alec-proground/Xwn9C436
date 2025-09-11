@@ -10,19 +10,11 @@ body:
       value: |
         Request Contents
   - type: input
-    id: publisher
-    attributes:
-      label: Publisher Name
-      description: Required.
-      placeholder: "https://marketplace.visualstudio.com/items?itemName=[PUBLISHER].[EXTENSIONS_NAME]"
-    validations:
-      required: true
-  - type: input
     id: extension_name
     attributes:
-      label: Extension Name
+      label: Publsher & Extension Name
       description: Required.
-      placeholder: "https://marketplace.visualstudio.com/items?itemName=[PUBLISHER].[EXTENSIONS_NAME]"
+      placeholder: "PUBLISHER.EXTENSIONS_NAME"
     validations:
       required: true
   - type: input
