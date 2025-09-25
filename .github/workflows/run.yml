@@ -209,8 +209,8 @@ jobs:
             const commentBody = [              
               "# ${{ needs.search.outputs.publisher }}.${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }}",
               "${{ needs.search.outputs.description }}",
-              "- Initial Release: ${{ needs.search.outputs.extension_released }}",
-              "- Recent Update (version): ${{ needs.search.outputs.version_updated }}",
+              "- Initial release: ${{ needs.search.outputs.extension_released }}",
+              "- Last Update for this version: ${{ needs.search.outputs.version_updated }}",
               "- Bundle URL: ${{ needs.search.outputs.vsix_url }}",
               "- Signature URL: ${{ needs.search.outputs.signature_url }}",
             ];
@@ -243,7 +243,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issueTitle = `[FAILED] ${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }} - ${ ${{ needs.search.outputs.message }} || 'Unknown Error' }`;
+            const failureMsg = "${{ needs.search.outputs.message }}" || 'Unknown Error';
+            const issueTitle = `[FAILED] ${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }} - ${ failureMsg }`;
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
