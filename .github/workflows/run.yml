@@ -57,11 +57,13 @@ jobs:
           script: |
             const keyword = "${{ needs.extract.outputs.extension_name }}".trim();
             const [publisher, extensionName] = keyword.split('.')
-            let version = "${{ needs.extract.outputs.version }}";
+            const versionOnForm = "${{ needs.extract.outputs.version }}";
+            const version = versionOnForm === "_No response_" ? "" : versionOnForm.trim();
 
-            if (version === "_No response_") {
-              version = "";
-            }
+            core.setOutput('publisher', publisher);
+            core.setOutput('title', extensionName);
+            core.setOutput('version', version);
+
 
             if (!publisher || !extensionName ) {
               core.setFailed('Extension Name is missing from the extract step.');
@@ -196,11 +198,8 @@ jobs:
             core.info(`Version: ${targetVersion.version}`);
             core.info(`LastUpdate: ${targetVersion.lastUpdated}`);
             
-            core.setOutput('publisher', publisher);
-            core.setOutput('title', extensionName);
             core.setOutput('description', extension.shortDescription);
             core.setOutput('extension_released', extension.releaseDate);
-            core.setOutput('version', targetVersion.version);
             core.setOutput('version_updated', targetVersion.lastUpdated);
             core.setOutput('vsix_url', vsixUrl);
             core.setOutput('signature_url', signatureUrl);
@@ -288,11 +287,12 @@ jobs:
               repo: context.repo.repo,
               body: commentBody
             });
+
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              title: `[FAILED] ${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }}`,
+              title: `[FAILED] ${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }}` ,
               state: 'closed',
               state_reason: 'not_planned'
             });
