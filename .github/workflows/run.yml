@@ -82,7 +82,7 @@ jobs:
                 sortOrder: 0
               }],
               assetTypes: [],
-              flags: 915
+              flags: 1459
             };
 
             const response = await fetch(url, {
