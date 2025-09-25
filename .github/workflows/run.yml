@@ -253,8 +253,8 @@ jobs:
               state: 'closed',
               state_reason: 'not_planned'
             });
-
-            const failedJob = context.payload.workflow_run.jobs.find(job => job.conclusion === 'failure');
+            console.log(context.payload.);
+            const failedJob = context.payload.jobs.find(job => job.result === 'failure');
             const commentBody = [
              `# Failed to process the extension request.`,
              `Please check the workflow run logs for details.`,
