@@ -207,14 +207,12 @@ jobs:
           script: |
             const vsixUrl = "${{ needs.search.outputs.vsix_url }}";
             const commentBody = [              
-              "publisher: ${{ needs.search.outputs.publisher }}",
-              "title: ${{ needs.search.outputs.title }}",
-              "description: ${{ needs.search.outputs.description }}",
-              "extension_released: ${{ needs.search.outputs.extension_released }}",
-              "version: ${{ needs.search.outputs.version }}",
-              "version_updated: ${{ needs.search.outputs.version_updated }}",
-              "vsix_url: ${{ needs.search.outputs.vsix_url }}",
-              "signature_url: ${{ needs.search.outputs.signature_url }}",
+              "${{ needs.search.outputs.publisher }}.${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }}",
+              "${{ needs.search.outputs.description }}",
+              "- Initial Release: ${{ needs.search.outputs.extension_released }}",
+              "- Recent Update (version): ${{ needs.search.outputs.version_updated }}",
+              "- Bundle URL: ${{ needs.search.outputs.vsix_url }}",
+              "- Signature URL: ${{ needs.search.outputs.signature_url }}",
             ];
             
             await github.rest.issues.createComment({
