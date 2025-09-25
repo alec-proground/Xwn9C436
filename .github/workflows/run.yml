@@ -207,7 +207,7 @@ jobs:
           script: |
             const vsixUrl = "${{ needs.search.outputs.vsix_url }}";
             const commentBody = [              
-              "${{ needs.search.outputs.publisher }}.${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }}",
+              "# ${{ needs.search.outputs.publisher }}.${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }}",
               "${{ needs.search.outputs.description }}",
               "- Initial Release: ${{ needs.search.outputs.extension_released }}",
               "- Recent Update (version): ${{ needs.search.outputs.version_updated }}",
@@ -255,7 +255,8 @@ jobs:
 
             const failedJob = context.payload.workflow_run.jobs.find(job => job.conclusion === 'failure');
             const commentBody = [
-             `-❌ Failed to process the extension request. Please check the workflow run logs for details.`,
+             `# Failed to process the extension request.`,
+             `Please check the workflow run logs for details.`,
              `- Action: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.payload.workflow_run.id}`,
              `- Failed Job: ${failedJob ? failedJob.name : 'Unknown'}`
             ].join('\n');
