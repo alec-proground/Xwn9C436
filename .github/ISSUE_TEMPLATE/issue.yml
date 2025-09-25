@@ -1,7 +1,7 @@
 name: Issue
-description: Request ...
-title: "New Request..."
-labels: ["issue_test"]
+description: Requesting the addition of a new extension to the private marketplace.
+title: "Opening a New Issue"
+labels: ["initiating"]
 body:
   - type: markdown
     attributes:

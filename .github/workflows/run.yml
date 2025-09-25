@@ -55,12 +55,6 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            function exitWithMessage(message) {
-              core.setOutput('message', message);
-              core.setFailed(message);
-              return;
-            }
-
             const keyword = "${{ needs.extract.outputs.extension_name }}".trim();
             const [publisher, extensionName] = keyword.split('.')
             const versionOnForm = "${{ needs.extract.outputs.version }}";
@@ -70,117 +64,110 @@ jobs:
             core.setOutput('title', extensionName);
             core.setOutput('version', version);
 
-
-            if (!publisher || !extensionName ) {
-              exitWithMessage('Extension Name is missing from the extract step.');
-            }
-
-            core.info(`📡 Querying marketplace for ${publisher}`);
-
-            const url = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
-            const body = {
-              filters: [{
-                criteria: [{
-                  filterType: 7,
-                  value: `${publisher}.${extensionName}`
-                }],
-                pageNumber: 1,
-                pageSize: 1,
-                sortBy: 0,
-                sortOrder: 0
-              }],
-              assetTypes: [],
-              flags: 1459
-            };
-
-            const response = await fetch(url, {
-              method: 'POST',
-              headers: {
-                'Accept': 'application/json;api-version=3.0-preview.1',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(body)
-            });
-
-            if (!response.ok) {
-              exitWithMessage(`Failed to query marketplace: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            // --- Validation Steps ---
-            core.info('🧐 Validating response...');
-            if (!data.results || !data.results[0] || !data.results[0].extensions) {
-              exitWithMessage(`Error: Invalid response structure from marketplace.`);
-            }
-            const extensions = data.results[0].extensions;
-            if (extensions.length !== 1) {
-              exitWithMessage(`Error: Expected 1 extension in response, but found ${extensions.length}.`);
-            }
-            core.info('✔️ Found exactly one extension.');
-
-            const extension = extensions[0];
-            if (extension.publisher.publisherName.toLowerCase() !== publisher.toLowerCase()) {
-              exitWithMessage(`Error: Publisher name mismatch. Expected '${publisher}' (case-insensitive), but found '${extension.publisher.publisherName}'.`);
-            }
-            core.info('✔️ Publisher name matches.');
-
-            if (extension.extensionName.toLowerCase() !== extensionName.toLowerCase()) {
-              exitWithMessage(`Error: Extension name mismatch. Expected '${extensionName}' (case-insensitive), but found '${extension.extensionName}'.`);
-            }
-            core.info('✔️ Extension name matches.');
-
-            if (!extension.versions || extension.versions.length === 0) {
-              exitWithMessage(`Error: No versions found for this extension.`);
-            }
-            core.info(`✔️ Found ${extension.versions.length} version(s).`);
-
-            if (version) {
-              core.info(`ℹ️ Specific version requested: ${version}`);
-              const versionExists = extension.versions.some(v => v.version === version);
-              if (!versionExists) {
-                exitWithMessage(`Error: Specified version '${version}' not found in the marketplace.`);
+            try {
+              if (!publisher || !extensionName ) {
+                throw new Error('Extension Name is missing from the extract step.');
               }
-              core.info(`✔️ Specified version '${version}' found.`);
-            } else {
-              core.info('ℹ️ No specific version requested, skipping version check.');
+
+              const url = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
+              const body = {
+                filters: [{
+                  criteria: [{
+                    filterType: 7,
+                    value: `${publisher}.${extensionName}`
+                  }],
+                  pageNumber: 1,
+                  pageSize: 1,
+                  sortBy: 0,
+                  sortOrder: 0
+                }],
+                assetTypes: [],
+                flags: 1459
+              };
+
+              const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                  'Accept': 'application/json;api-version=3.0-preview.1',
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+              });
+
+              if (!response.ok) {
+                throw new Error(`Failed to query marketplace: ${response.status} ${response.statusText}`);
+              }
+
+              const data = await response.json();
+              if (!data.results || !data.results[0] || !data.results[0].extensions) {
+                throw new Error(`Error: Invalid response structure from marketplace.`);
+              }
+              const extensions = data.results[0].extensions;
+              if (extensions.length !== 1) {
+                throw new Error(`Error: Expected 1 extension in response, but found ${extensions.length}.`);
+              }
+
+              const extension = extensions[0];
+              if (extension.publisher.publisherName.toLowerCase() !== publisher.toLowerCase()) {
+                throw new Error(`Error: Publisher name mismatch. Expected '${publisher}' (case-insensitive), but found '${extension.publisher.publisherName}'.`);
+              }
+
+              if (extension.extensionName.toLowerCase() !== extensionName.toLowerCase()) {
+                throw new Error(`Error: Extension name mismatch. Expected '${extensionName}' (case-insensitive), but found '${extension.extensionName}'.`);
+              }
+              core.info('✔️ Extension name matches.');
+
+              if (!extension.versions || extension.versions.length === 0) {
+                throw new Error(`Error: No versions found for this extension.`);
+              }
+
+              if (version) {
+                core.info(`ℹ️ Specific version requested: ${version}`);
+                const versionExists = extension.versions.some(v => v.version === version);
+                if (!versionExists) {
+                  throw new Error(`Error: Specified version '${version}' not found in the marketplace.`);
+                }
+                core.info(`✔️ Specified version '${version}' found.`);
+              } else {
+                core.info('ℹ️ No specific version requested, skipping version check.');
+              }
+
+              // --- Extract Asset URLs ---
+              let targetVersionStr = version || extension.versions[0].version;
+              const targetVersion = extension.versions.find(v => v.version === targetVersionStr);
+              if (!targetVersion) {
+                throw new Error(`Error: Could not find metadata for target version ${targetVersionStr}.`);
+              }
+
+              const vsixFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VSIXPackage');
+              const signatureFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VsixSignature');
+
+              if (!vsixFile || !signatureFile) {
+                throw new Error(`Could not find VSIX or Signature URL for version ${targetVersionStr}.`);
+              }
+
+              const vsixUrl = vsixFile.source;
+              const signatureUrl = signatureFile.source;
+
+              core.info(`Publisher: ${publisher}`);
+              core.info(`Extension: ${extensionName}`);
+              core.info(`VSIX URL: ${vsixUrl}`);
+              core.info(`Signature URL: ${signatureUrl}`);
+              core.info(`ShortDescription: ${extension.shortDescription}`);
+              core.info(`ReleaseDate URL: ${extension.releaseDate}`);
+              core.info(`Version: ${targetVersion.version}`);
+              core.info(`LastUpdate: ${targetVersion.lastUpdated}`);
+              
+              core.setOutput('description', extension.shortDescription);
+              core.setOutput('extension_released', extension.releaseDate);
+              core.setOutput('version_updated', targetVersion.lastUpdated);
+              core.setOutput('vsix_url', vsixUrl);
+              core.setOutput('signature_url', signatureUrl);
+            } catch (error) {
+              core.setOutput('message', error.message);
+              core.setFailed(error.message);
+              return;
             }
-
-            core.info('✅ Validation successful.');
-
-            // --- Extract Asset URLs ---
-            let targetVersionStr = version || extension.versions[0].version;
-            core.info(`ℹ️ Using version for asset download: ${targetVersionStr}`);
-
-            const targetVersion = extension.versions.find(v => v.version === targetVersionStr);
-            if (!targetVersion) {
-              exitWithMessage(`Error: Could not find metadata for target version ${targetVersionStr}.`);
-            }
-
-            const vsixFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VSIXPackage');
-            const signatureFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VsixSignature');
-
-            if (!vsixFile || !signatureFile) {
-              exitWithMessage(`Could not find VSIX or Signature URL for version ${targetVersionStr}.`);
-            }
-
-            const vsixUrl = vsixFile.source;
-            const signatureUrl = signatureFile.source;
-
-            core.info(`Publisher: ${publisher}`);
-            core.info(`Extension: ${extensionName}`);
-            core.info(`VSIX URL: ${vsixUrl}`);
-            core.info(`Signature URL: ${signatureUrl}`);
-            core.info(`ShortDescription: ${extension.shortDescription}`);
-            core.info(`ReleaseDate URL: ${extension.releaseDate}`);
-            core.info(`Version: ${targetVersion.version}`);
-            core.info(`LastUpdate: ${targetVersion.lastUpdated}`);
-            
-            core.setOutput('description', extension.shortDescription);
-            core.setOutput('extension_released', extension.releaseDate);
-            core.setOutput('version_updated', targetVersion.lastUpdated);
-            core.setOutput('vsix_url', vsixUrl);
-            core.setOutput('signature_url', signatureUrl);
 
   execute-ssm-install:
     needs: search
@@ -258,16 +245,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const commentBody = `❌ Failed to process the extension request. Please check the workflow run logs for details.`;
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: commentBody
-            });
-
-            const issueTitle = `[FAILED] ${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }} - ${{ needs.search.outputs.message }}`;
-            
+            const issueTitle = `[FAILED] ${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }} - ${ ${{ needs.search.outputs.message }} || 'Unknown Error' }`;
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -276,4 +254,18 @@ jobs:
               state: 'closed',
               state_reason: 'not_planned'
             });
+
+            const failedJob = context.payload.workflow_run.jobs.find(job => job.conclusion === 'failure');
+            const commentBody = [
+             `-❌ Failed to process the extension request. Please check the workflow run logs for details.`,
+             `- Action: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.payload.workflow_run.id}`,
+             `- Failed Job: ${failedJob ? failedJob.name : 'Unknown'}`
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+
 
