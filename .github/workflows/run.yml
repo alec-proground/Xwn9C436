@@ -55,6 +55,12 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            function exitWithMessage(message) {
+              core.setOutput('message', message);
+              core.setFailed(message);
+              return;
+            }
+
             const keyword = "${{ needs.extract.outputs.extension_name }}".trim();
             const [publisher, extensionName] = keyword.split('.')
             const versionOnForm = "${{ needs.extract.outputs.version }}";
@@ -66,8 +72,7 @@ jobs:
 
 
             if (!publisher || !extensionName ) {
-              core.setFailed('Extension Name is missing from the extract step.');
-              return;
+              exitWithMessage('Extension Name is missing from the extract step.');
             }
 
             core.info(`📡 Querying marketplace for ${publisher}`);
@@ -98,10 +103,7 @@ jobs:
             });
 
             if (!response.ok) {
-              const message = `Failed to query marketplace: ${response.status} ${response.statusText}`
-              core.setOutput('message', message);
-              core.setFailed(message);
-              return;
+              exitWithMessage(`Failed to query marketplace: ${response.status} ${response.statusText}`);
             }
 
             const data = await response.json();
@@ -109,42 +111,27 @@ jobs:
             // --- Validation Steps ---
             core.info('🧐 Validating response...');
             if (!data.results || !data.results[0] || !data.results[0].extensions) {
-              const message = `Error: Invalid response structure from marketplace.`;
-              core.setOutput('message', message);
-              core.setFailed(message);
-              return;
+              exitWithMessage(`Error: Invalid response structure from marketplace.`);
             }
             const extensions = data.results[0].extensions;
             if (extensions.length !== 1) {
-              const message = `Error: Expected 1 extension in response, but found ${extensions.length}.`;
-              core.setOutput('message', message);
-              core.setFailed(message);
-              return;
+              exitWithMessage(`Error: Expected 1 extension in response, but found ${extensions.length}.`);
             }
             core.info('✔️ Found exactly one extension.');
 
             const extension = extensions[0];
             if (extension.publisher.publisherName.toLowerCase() !== publisher.toLowerCase()) {
-              const message = `Error: Publisher name mismatch. Expected '${publisher}' (case-insensitive), but found '${extension.publisher.publisherName}'.`;
-              core.setOutput('message', message);
-              core.setFailed(message);
-              return;
+              exitWithMessage(`Error: Publisher name mismatch. Expected '${publisher}' (case-insensitive), but found '${extension.publisher.publisherName}'.`);
             }
             core.info('✔️ Publisher name matches.');
 
             if (extension.extensionName.toLowerCase() !== extensionName.toLowerCase()) {
-              const message = `Error: Extension name mismatch. Expected '${extensionName}' (case-insensitive), but found '${extension.extensionName}'.`;
-              core.setOutput('message', message);
-              core.setFailed(message);
-              return;
+              exitWithMessage(`Error: Extension name mismatch. Expected '${extensionName}' (case-insensitive), but found '${extension.extensionName}'.`);
             }
             core.info('✔️ Extension name matches.');
 
             if (!extension.versions || extension.versions.length === 0) {
-              const message = `Error: No versions found for this extension.`;
-              core.setOutput('message', message);
-              core.setFailed(message);
-              return;
+              exitWithMessage(`Error: No versions found for this extension.`);
             }
             core.info(`✔️ Found ${extension.versions.length} version(s).`);
 
@@ -152,10 +139,7 @@ jobs:
               core.info(`ℹ️ Specific version requested: ${version}`);
               const versionExists = extension.versions.some(v => v.version === version);
               if (!versionExists) {
-                const message = `Error: Specified version '${version}' not found in the marketplace.`;
-                core.setOutput('message', message);
-                core.setFailed(message);
-                return;
+                exitWithMessage(`Error: Specified version '${version}' not found in the marketplace.`);
               }
               core.info(`✔️ Specified version '${version}' found.`);
             } else {
@@ -170,20 +154,14 @@ jobs:
 
             const targetVersion = extension.versions.find(v => v.version === targetVersionStr);
             if (!targetVersion) {
-              const message = `Error: Could not find metadata for target version ${targetVersionStr}.`;
-              core.setOutput('message', message);
-              core.setFailed(message);
-              return;
+              exitWithMessage(`Error: Could not find metadata for target version ${targetVersionStr}.`);
             }
 
             const vsixFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VSIXPackage');
             const signatureFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VsixSignature');
 
             if (!vsixFile || !signatureFile) {
-              const message = `Could not find VSIX or Signature URL for version ${targetVersionStr}.`;
-              core.setOutput('message', message);
-              core.setFailed(message);
-              return;
+              exitWithMessage(`Could not find VSIX or Signature URL for version ${targetVersionStr}.`);
             }
 
             const vsixUrl = vsixFile.source;
