@@ -186,8 +186,27 @@ jobs:
             core.setOutput('vsix_url', vsixUrl);
             core.setOutput('signature_url', signatureUrl);
 
+  execute-ssm-install:
+    needs: search
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET__KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Execute SSM Document
+        uses: aws-actions/aws-ssm-send-command@v1
+        with:
+          instance-ids: ${{ secrets.INSTANCE_ID }}
+          document-name: "manage-marketplace-extensions"
+          parameters: '{"url":["${{ needs.search.outputs.vsix_url }}"]}'
+
   update-issue:
-    needs: [search]
+    needs: [execute-ssm-install]
     if: success()
     runs-on: ubuntu-latest
     permissions:
