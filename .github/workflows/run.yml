@@ -257,6 +257,7 @@ jobs:
             const commentBody = [
              `# Failed to process the extension request.`,
              `Please check the workflow run logs for details.`,
+             `- ${failureMsg}`,
              `- Action: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             ].join('\n');
             await github.rest.issues.createComment({
