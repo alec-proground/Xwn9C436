@@ -199,11 +199,18 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Execute SSM Document
-        uses: aws-actions/aws-ssm-send-command@v1
-        with:
-          instance-ids: ${{ secrets.INSTANCE_ID }}
-          document-name: "manage-marketplace-extensions"
-          parameters: '{"url":["${{ needs.search.outputs.vsix_url }}"]}'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          DOCUMENT_NAME: "manage-marketplace-extensions"
+          INSTANCE_ID: ${{ secrets.INSTANCE_ID }}
+          URL: ${{ needs.search.outputs.vsix_url }}
+        run: |
+          aws ssm send-command \
+            --document-name ${{ env.DOCUMENT_NAME }} \
+            --targets "Key=instanceids,Values=${{ env.INSTANCE_ID }}" \
+            --parameters '{"url":["${{ env.URL }}"]}' \
+            --region ${{ secrets.AWS_REGION }}
 
   update-issue:
     needs: [execute-ssm-install]
