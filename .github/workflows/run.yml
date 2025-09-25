@@ -48,6 +48,7 @@ jobs:
       version_updated: ${{ steps.search-step.outputs.version_updated }}
       vsix_url: ${{ steps.search-step.outputs.vsix_url }}
       signature_url: ${{ steps.search-step.outputs.signature_url }}
+      message: ${{ steps.search-step.outputs.message }}
     steps:
       - name: Search Marketplace
         id: search-step
@@ -95,7 +96,9 @@ jobs:
             });
 
             if (!response.ok) {
-              core.setFailed(`Failed to query marketplace: ${response.status} ${response.statusText}`);
+              const message = `Failed to query marketplace: ${response.status} ${response.statusText}`
+              core.setOutput('message', message);
+              core.setFailed(message);
               return;
             }
 
@@ -104,31 +107,41 @@ jobs:
             // --- Validation Steps ---
             core.info('🧐 Validating response...');
             if (!data.results || !data.results[0] || !data.results[0].extensions) {
-              core.setFailed(`Error: Invalid response structure from marketplace.`);
+              const message = `Error: Invalid response structure from marketplace.`;
+              core.setOutput('message', message);
+              core.setFailed(message);
               return;
             }
             const extensions = data.results[0].extensions;
             if (extensions.length !== 1) {
-              core.setFailed(`Error: Expected 1 extension in response, but found ${extensions.length}.`);
+              const message = `Error: Expected 1 extension in response, but found ${extensions.length}.`;
+              core.setOutput('message', message);
+              core.setFailed(message);
               return;
             }
             core.info('✔️ Found exactly one extension.');
 
             const extension = extensions[0];
             if (extension.publisher.publisherName.toLowerCase() !== publisher.toLowerCase()) {
-              core.setFailed(`Error: Publisher name mismatch. Expected '${publisher}' (case-insensitive), but found '${extension.publisher.publisherName}'.`);
+              const message = `Error: Publisher name mismatch. Expected '${publisher}' (case-insensitive), but found '${extension.publisher.publisherName}'.`;
+              core.setOutput('message', message);
+              core.setFailed(message);
               return;
             }
             core.info('✔️ Publisher name matches.');
 
             if (extension.extensionName.toLowerCase() !== extensionName.toLowerCase()) {
-              core.setFailed(`Error: Extension name mismatch. Expected '${extensionName}' (case-insensitive), but found '${extension.extensionName}'.`);
+              const message = `Error: Extension name mismatch. Expected '${extensionName}' (case-insensitive), but found '${extension.extensionName}'.`;
+              core.setOutput('message', message);
+              core.setFailed(message);
               return;
             }
             core.info('✔️ Extension name matches.');
 
             if (!extension.versions || extension.versions.length === 0) {
-              core.setFailed('Error: No versions found for this extension.');
+              const message = `Error: No versions found for this extension.`;
+              core.setOutput('message', message);
+              core.setFailed(message);
               return;
             }
             core.info(`✔️ Found ${extension.versions.length} version(s).`);
@@ -137,7 +150,9 @@ jobs:
               core.info(`ℹ️ Specific version requested: ${version}`);
               const versionExists = extension.versions.some(v => v.version === version);
               if (!versionExists) {
-                core.setFailed(`Error: Specified version '${version}' not found in the marketplace.`);
+                const message = `Error: Specified version '${version}' not found in the marketplace.`;
+                core.setOutput('message', message);
+                core.setFailed(message);
                 return;
               }
               core.info(`✔️ Specified version '${version}' found.`);
@@ -153,7 +168,9 @@ jobs:
 
             const targetVersion = extension.versions.find(v => v.version === targetVersionStr);
             if (!targetVersion) {
-              core.setFailed(`Could not find metadata for target version ${targetVersionStr}.`);
+              const message = `Error: Could not find metadata for target version ${targetVersionStr}.`;
+              core.setOutput('message', message);
+              core.setFailed(message);
               return;
             }
 
@@ -161,7 +178,9 @@ jobs:
             const signatureFile = targetVersion.files.find(f => f.assetType === 'Microsoft.VisualStudio.Services.VsixSignature');
 
             if (!vsixFile || !signatureFile) {
-              core.setFailed(`Could not find VSIX or Signature URL for version ${targetVersionStr}.`);
+              const message = `Could not find VSIX or Signature URL for version ${targetVersionStr}.`;
+              core.setOutput('message', message);
+              core.setFailed(message);
               return;
             }
 
@@ -211,7 +230,7 @@ jobs:
             --region ${{ secrets.AWS_REGION }}
 
   update-issue:
-    needs: [execute-ssm-install]
+    needs: [execute-ssm-install,search]
     if: success()
     runs-on: ubuntu-latest
     permissions:
