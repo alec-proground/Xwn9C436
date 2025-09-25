@@ -1,4 +1,4 @@
-name: Issue
+name: Install Extension
 description: Requesting the addition of a new extension to the private marketplace.
 title: "Opening a New Issue"
 labels: ["initiating"]
