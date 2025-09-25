@@ -288,7 +288,7 @@ jobs:
               body: commentBody
             });
 
-            const issueTitle = `[FAILED] ${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }} - ${{ needs.search.outputs.publisher }}`;
+            const issueTitle = `[FAILED] ${{ needs.search.outputs.title }}:${{ needs.search.outputs.version }} - ${{ needs.search.outputs.message }}`;
             
             await github.rest.issues.update({
               owner: context.repo.owner,
