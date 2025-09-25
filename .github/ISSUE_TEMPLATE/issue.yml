@@ -1,12 +1,8 @@
 name: Install Extension
 description: Requesting the addition of a new extension to the private marketplace.
-title: "Opening a New Issue"
+title: "[Open] Install Extension"
 labels: ["initiating"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Request Contents
   - type: input
     id: extension_name
     attributes:
