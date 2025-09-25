@@ -1,9 +1,7 @@
 name: Issue
 description: Request ...
-title: "[TEST]: "
+title: "New Request..."
 labels: ["issue_test"]
-assignees:
-  - alec-proground
 body:
   - type: markdown
     attributes:
@@ -21,7 +19,6 @@ body:
     id: version
     attributes:
       label: version
-      description: If you want.
       placeholder: 3.0.17
     validations:
-      required: false
+      required: true
